@@ -1,6 +1,8 @@
 use std::fs::File;
-mod golomb;
+use std::io::Read;
 pub mod h264nalreader;
+pub mod types;
+pub use types::{H264NalUnit, H264NalUnitType, H264NalUnitSPS, H264NalFormat, H264NalUnitIDR, H264NalUnitPPS};
 
 #[derive(Debug)]
 pub enum H264NalParseError {
@@ -11,80 +13,10 @@ pub enum H264NalParseError {
     GenericParseError
 }
 
-
 pub struct H264NalParser {
     data: Vec<u8>,
     size: usize,
-    pos: usize,
     pub format: H264NalFormat
-}
-
-pub enum H264NalFormat {
-    BYTESTREAM, AVC, UNKNOWN
-}
-
-#[derive(Debug)]
-pub enum H264NalUnitType {
-    SPS,
-    PPS,
-    IDR,
-    P,
-    UNKNOWN
-}
-
-#[derive(Debug)]
-pub struct H264NalUnitSPS {
-    pub profile_idc: u8,
-    pub constraints: Vec<u8>,
-    pub level_idc: u8,
-    pub seq_parameter_set_id: u32
-}
-
-#[derive(Debug)]
-pub struct H264NalUnitPPS {
-}
-
-#[derive(Debug)]
-pub struct H264NalUnitIDR {
-    pub first_mb_in_slice: u64
-}
-
-#[derive(Debug)]
-pub struct H264NalUnit {
-    pub name: String,
-    pub sc_offset: usize,
-    pub data_offset: usize,
-    pub size: usize,
-
-    /* H264 Nal Unit Fields */
-    pub nal_ref_idc: u8,
-    pub nal_unit_type_num: u8,
-    pub nal_unit_type: H264NalUnitType
-}
-
-impl H264NalUnit {
-    pub fn new(sc_offset: usize,
-               data_offset: usize,
-               size: usize,
-               ref_idc: u8,
-               unit_type: u8) -> H264NalUnit
-    {
-        let nal_unit_type = match unit_type {
-            5 => H264NalUnitType::IDR,
-            7 => H264NalUnitType::SPS,
-            8 => H264NalUnitType::PPS,
-            _ => H264NalUnitType::UNKNOWN
-        };
-        H264NalUnit {
-            name: "Unit".to_string(),
-            sc_offset: sc_offset,
-            data_offset: data_offset,
-            size: size,
-            nal_ref_idc: ref_idc,
-            nal_unit_type_num: unit_type,
-            nal_unit_type: nal_unit_type
-        }
-    }
 }
 
 macro_rules! check_size {
@@ -103,31 +35,89 @@ impl H264NalParser {
         Ok(H264NalParser {
             data: data,
             size: size,
-            pos: 0,
             format: H264NalFormat::UNKNOWN
         })
     }
 
     pub fn parse_sps(&mut self, offset: usize) -> Result<H264NalUnitSPS, H264NalParseError> {
-        let reader = h264nalreader::H264NalReader::new(self.data[self.pos..], self.pos);
-        let profile_idc = reader.read_u8(8);
+        let mut reader = h264nalreader::H264NalReader::new(&self.data[offset+1..]);
+        let mut unit = H264NalUnitSPS::new();
+        unit.profile_idc = reader.read_u8(8).unwrap();
         {
-            let constraint_0 = reader.read_u8(1).unwrap();
-            let constraint_1 = reader.read_u8(1).unwrap();
-            let constraint_2 = reader.read_u8(1).unwrap();
-            let constraint_3 = reader.read_u8(1).unwrap();
-            let constraint_4 = reader.read_u8(1).unwrap();
-            let constraint_5 = reader.read_u8(1).unwrap();
+            unit.constraint_0_flag = reader.read_u8(1).unwrap();
+            unit.constraint_1_flag = reader.read_u8(1).unwrap();
+            unit.constraint_2_flag = reader.read_u8(1).unwrap();
+            unit.constraint_3_flag = reader.read_u8(1).unwrap();
+            unit.constraint_4_flag = reader.read_u8(1).unwrap();
+            unit.constraint_5_flag = reader.read_u8(1).unwrap();
             reader.read_u8(2); // reserved 0 bits
         }
-        let level_idc = reader.read_u8(8);
+        unit.level_idc = reader.read_u8(8).unwrap();
+        unit.seq_parameter_set_id = reader.read_ue().unwrap();
 
-        let sps_id = reader.read_golomb();
-        Err(H264NalParseError::Unimplemented)
+        // depending on the profile we parse various other flags.
+        let certain_profiles : Vec<u8> = vec![100, 110, 122, 244, 44, 83, 86, 118, 128, 138, 139, 134, 135];
+        if certain_profiles.contains(&unit.profile_idc) {
+            unit.chroma_format_idc = reader.read_ue().unwrap();
+            if unit.chroma_format_idc == 3 {
+                unit.separate_colour_plane_flag = reader.read_u8(1).unwrap();
+            }
+            unit.bit_depth_luma_minus8 = reader.read_ue().unwrap();
+            unit.bit_depth_chroma_minus8 = reader.read_ue().unwrap();
+            unit.qpprime_y_zero_transform_bypass_flag = reader.read_u8(1).unwrap();
+            unit.seq_scaling_matrix_present_flag = reader.read_u8(1).unwrap();
+            if unit.seq_scaling_matrix_present_flag == 1 {
+                let scaling_lists = if unit.chroma_format_idc != 3 { 8 } else { 12 };
+                unit.seq_scaling_list_present_flag.reserve(scaling_lists);
+                for i in 0..scaling_lists {
+                    unit.seq_scaling_list_present_flag[i] = reader.read_u8(1).unwrap();
+                    if unit.seq_scaling_list_present_flag[i] == 1 {
+                        if i < 6 {
+                        } else {
+                        }
+                    }
+                }
+            }
+        }
+
+        unit.log2_max_frame_num_minus4 = reader.read_ue().unwrap();
+        unit.pic_order_cnt_type = reader.read_ue().unwrap();
+        if unit.pic_order_cnt_type == 0 {
+            unit.log2_max_pic_order_cnt_lsb_minus4 = reader.read_ue().unwrap();
+        } else if unit.pic_order_cnt_type == 1 {
+            unit.delta_pic_order_always_zero_flag = reader.read_u8(1).unwrap();
+            unit.offset_for_non_ref_pic = reader.read_se().unwrap();
+            unit.offset_for_top_to_bottom_field = reader.read_se().unwrap();
+            unit.num_ref_frames_in_pic_order_cnt_cycle = reader.read_ue().unwrap();
+            unit.offset_for_ref_frame.reserve(unit.num_ref_frames_in_pic_order_cnt_cycle as usize);
+            for i in 0..unit.num_ref_frames_in_pic_order_cnt_cycle {
+                unit.offset_for_ref_frame[i as usize] = reader.read_se().unwrap();
+            }
+        }
+        unit.max_num_ref_frames = reader.read_ue().unwrap();
+        unit.gaps_in_frame_num_value_allowed_flag = reader.read_u8(1).unwrap();
+        unit.pic_width_in_mbs_minus1 = reader.read_ue().unwrap();
+        unit.pic_height_in_map_units_minus1 = reader.read_ue().unwrap();
+        unit.frame_mbs_only_flag = reader.read_u8(1).unwrap();
+        if unit.frame_mbs_only_flag == 0 {
+            unit.mb_adaptive_frame_field_flag = reader.read_u8(1).unwrap();
+        }
+        unit.direct_8x8_inference_flag = reader.read_u8(1).unwrap();
+        unit.frame_cropping_flag = reader.read_u8(1).unwrap();
+        if unit.frame_cropping_flag == 1 {
+            unit.frame_crop_left_offset = reader.read_ue().unwrap();
+            unit.frame_crop_right_offset = reader.read_ue().unwrap();
+            unit.frame_crop_top_offset = reader.read_ue().unwrap();
+            unit.frame_crop_bottom_offset = reader.read_ue().unwrap();
+        }
+        unit.vui_parameters_present_flag = reader.read_u8(1).unwrap();
+
+        Ok(unit)
     }
 
     pub fn parse_idr(&self, offset: usize) -> Result<H264NalUnitIDR, H264NalParseError> {
-        let first_mb_in_slice = golomb::golombdec(&self.data[offset..]);
+        let mut reader = h264nalreader::H264NalReader::new(&self.data[offset+1..]);
+        let first_mb_in_slice = reader.read_ue().unwrap();
         Ok(H264NalUnitIDR{ first_mb_in_slice: first_mb_in_slice })
     }
 
@@ -161,8 +151,7 @@ impl H264NalParser {
         let ref_idc = (byte & 0x60) >> 5;
         let unit_type = byte & 0x1F;
         cursor += 1;
-        let mut header_bytes = 1;
-        cursor += 1;
+        cursor += 1; // header byte
         let mut size = self.size - data_offset - sc_size;
         for i in (cursor + data_offset)..self.size {
             if self.size - i < 3 {

@@ -1,50 +1,52 @@
-struct H264NalReader {
-    data: Vec<u8>,
+pub struct H264NalReader<'a> {
+    data: &'a[u8],
     size: usize,
     next_byte: u8,
-    byte_cache: u32,
+    cache: u32,
     bits_in_cache: u32,
     pos: usize,
+    num_epb: u32
 }
 
-impl H264NalReader {
-    pub fn new(data: Vec<u8>, pos: usize) {
+impl<'a> H264NalReader<'a> {
+    pub fn new(data: &'a[u8]) -> H264NalReader<'a> {
         H264NalReader {
             data: data,
-            size: data.length(),
+            size: data.len(),
             next_byte: 0xFF,
             cache: 0xFF,
             bits_in_cache: 0,
-            pos: pos
+            pos: 0,
+            num_epb: 0
         }
     }
 
     /// Meant to update the cache before reading any bits so
     /// that the nal parser can ensure there are at least nbits bits
     /// in the cache for reading.
-    fn read_update(&mut self, u32 nbits) -> bool {
+    fn read_update(&mut self, nbits : u32) -> bool {
         if nbits > 32 {
             println!("Wanted to read {} bits but can read no more than 32",
                      nbits);
             return false;
         }
-        if nbits > self.bits_in_cache + (self.size - self.pos) * 8 {
+        if nbits > self.bits_in_cache + (self.size - self.pos) as u32 * 8 {
             println!("Wanted to read {} bits but there's only {} left",
-                     nbits, self.bits_in_cache + (self.size - self.pos) * 8);
+                     nbits, self.bits_in_cache + (self.size - self.pos) as u32 * 8);
             return false;
         }
-        let mut ret : u32 = 0;
         let mut check_three_byte = true;
         while self.bits_in_cache < nbits {
-            let byte = self.data[pos++];
+            let byte = self.data[self.pos];
+            self.pos += 1;
             if check_three_byte && byte == 0x03 && self.next_byte == 0x00 && (self.cache & 0xFF == 0x00) {
                 // This is an emulation byte, don't check the next byte even if it's 0x03
-                self.num_epb++;
+                self.num_epb += 1;
                 check_three_byte = false;
             } else {
                 check_three_byte = true;
                 // push next byte into the cache
-                self.cache = (self.cache << 8) | self.next_byte;
+                self.cache = (self.cache << 8) | self.next_byte as u32;
                 self.next_byte = byte;
                 self.bits_in_cache += 8;
             }
@@ -52,70 +54,73 @@ impl H264NalReader {
         true
     }
 
-    /// Reads nbits from the cache and then returns that as a u8
-    pub fn read_u8(&mut self, nbits: usize) -> Option<u8> {
-        if !self.read_update(self, nbits) {
-            return None;
-        }
+    /// Reads nbits from the cache and then returns that as a u8.
+    /// The cache is self.cache and self.next_byte. The first 8 bits
+    /// of the cache are in self.next_byte, and the rest are in self.cache.
+    pub fn read_u8(&mut self, nbits: u32) -> Option<u8> {
+        self.read_u32(nbits).map(|v| v as u8)
+    }
+
+    /// Reads nbits from the cache and then returns that as a u16.
+    /// The cache is self.cache and self.next_byte. The first 8 bits
+    /// of the cache are in self.next_byte, and the rest are in self.cache.
+    pub fn read_u16(&mut self, nbits: u32) -> Option<u16> {
+        self.read_u32(nbits).map(|v| v as u16)
+    }
+
+    /// Reads nbits from the cache and then returns that as a u32.
+    /// The cache is self.cache and self.next_byte. The first 8 bits
+    /// of the cache are in self.next_byte, and the rest are in self.cache.
+    fn read_u32(&mut self, nbits: u32) -> Option<u32> {
         if nbits > 8 {
             println!("Tried to read {} bits but can only read 8", nbits);
             return None;
         }
-        let mut val : u8 = 0;
-        let shift = self.bits_in_cache - nbits;
-        val = self.next_byte >> shift;
-        val |= self.cache << (8 - shift);
-        if nbits > 8 {
-            val &= (0x01 << nbits) - 1;
+        if !self.read_update(nbits) {
+            return None;
         }
+        let shift = self.bits_in_cache - nbits;
+        let mut val : u32 = self.next_byte as u32 >> shift;
+        val |= self.cache << (8 - shift);
+        val = val & ((0x01 << nbits) - 1);
         self.bits_in_cache = shift;
         Some(val)
     }
 
-    /// Reads nbits from the cache and then returns that as a u16
-    pub fn read_u16(&mut self, nbits: usize) -> Option<u16> {
-        if !self.read_update(self, nbits) {
-            return None;
-        }
-        if nbits > 16 {
-            println!("Tried to read {} bits but can only read 8", nbits);
-            return None;
-        }
-        let mut val : u16 = 0;
-        let shift = self.bits_in_cache - nbits;
-        val = self.next_byte >> shift;
-        val |= self.cache << (8 - shift);
-        if nbits > 8 {
-            val &= (0x01 << nbits) - 1;
-        }
-        self.bits_in_cache = shift;
-        Some(val)
-    }
-
-    /// Reads nbits from the cache and then returns that as a u32
-    pub fn read_u32(&mut self, nbits: usize) -> Option<u32> {
-        if !self.read_update(self, nbits) {
-            return None;
-        }
-        if nbits > 32 {
-            println!("Tried to read {} bits but can only read 8", nbits);
-            return None;
-        }
-        let mut val : u32 = 0;
-        let shift = self.bits_in_cache - nbits;
-        val = self.next_byte >> shift;
-        val |= self.cache << (8 - shift);
-        if nbits > 8 {
-            val &= (0x01 << nbits) - 1;
-        }
-        self.bits_in_cache = shift;
-        Some(val)
-    }
-
-    pub fn read_ue(&mut self, nbits: usize) -> Option<u32> {
-        let mut leadingZeros = -1;
-        let bit = self.read_u32(1);
+    pub fn read_ue(&mut self) -> Option<u32> {
+        let mut leading_zeros = 0;
+        let mut bit = match self.read_u8(1) {
+            None => return None,
+            Some(b) => b
+        };
         while bit == 0 {
+            leading_zeros += 1;
+            bit = match self.read_u8(1) {
+                None => return None,
+                Some(b) => b
+            };
         }
+        if leading_zeros > 32 {
+            println!("Reading UE and leading zeros > 32: {}", leading_zeros);
+            return None;
+        }
+        let val = match self.read_u32(leading_zeros) {
+            None => return None,
+            Some(v) => v
+        };
+        Some((1 << leading_zeros) - 1 + val)
+    }
+
+    pub fn read_se(&mut self) -> Option<i32> {
+        let ue = match self.read_ue() {
+            None => return None,
+            Some(v) => v
+        };
+        Some(
+            if ue % 2 == 0 {
+                (ue as i32 / 2) + 1
+            } else {
+                -(ue as i32 / 2)
+            })
     }
 }
