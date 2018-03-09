@@ -18,9 +18,12 @@ fn main() {
                 let sps = parser.parse_sps(next_unit.data_offset);
                 println!("Parsed SPS: {:?}", sps);
             },
-            h264nalparse::H264NalUnitType::PPS => { println!("Parsed PPS"); },
+            h264nalparse::H264NalUnitType::PPS => {
+                let pps = parser.parse_pps(next_unit.data_offset);
+                println!("Parsed PPS: {:?}", pps);
+            },
             h264nalparse::H264NalUnitType::IDR => {
-                let idr = parser.parse_idr(next_unit.data_offset);
+                let idr = parser.parse_slice(next_unit.data_offset, &next_unit);
                 println!("Parsed IDR {:?}", idr);
             },
             _ =>   { println!("Parsed type {}", next_unit.nal_unit_type_num); }

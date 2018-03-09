@@ -5,7 +5,7 @@ pub struct H264NalReader<'a> {
     cache: u32,
     bits_in_cache: u32,
     pos: usize,
-    num_epb: u32
+    num_epb: u32,
 }
 
 impl<'a> H264NalReader<'a> {
@@ -17,7 +17,7 @@ impl<'a> H264NalReader<'a> {
             cache: 0xFF,
             bits_in_cache: 0,
             pos: 0,
-            num_epb: 0
+            num_epb: 0,
         }
     }
 
@@ -54,10 +54,19 @@ impl<'a> H264NalReader<'a> {
         true
     }
 
+    /// Reads 1 bit from the cache and returns it as a boolean.
+    pub fn read_flag(&mut self) -> Option<bool> {
+        self.read_u8(1).map(|v| if v == 1 { true } else { false })
+    }
+
     /// Reads nbits from the cache and then returns that as a u8.
     /// The cache is self.cache and self.next_byte. The first 8 bits
     /// of the cache are in self.next_byte, and the rest are in self.cache.
     pub fn read_u8(&mut self, nbits: u32) -> Option<u8> {
+        if nbits > 8 {
+            println!("Tried to read {} bits but can only read 8", nbits);
+            return None;
+        }
         self.read_u32(nbits).map(|v| v as u8)
     }
 
@@ -65,14 +74,18 @@ impl<'a> H264NalReader<'a> {
     /// The cache is self.cache and self.next_byte. The first 8 bits
     /// of the cache are in self.next_byte, and the rest are in self.cache.
     pub fn read_u16(&mut self, nbits: u32) -> Option<u16> {
+        if nbits > 16 {
+            println!("Tried to read {} bits but can only read 8", nbits);
+            return None;
+        }
         self.read_u32(nbits).map(|v| v as u16)
     }
 
     /// Reads nbits from the cache and then returns that as a u32.
     /// The cache is self.cache and self.next_byte. The first 8 bits
     /// of the cache are in self.next_byte, and the rest are in self.cache.
-    fn read_u32(&mut self, nbits: u32) -> Option<u32> {
-        if nbits > 8 {
+    pub fn read_u32(&mut self, nbits: u32) -> Option<u32> {
+        if nbits > 32 {
             println!("Tried to read {} bits but can only read 8", nbits);
             return None;
         }
@@ -81,8 +94,14 @@ impl<'a> H264NalReader<'a> {
         }
         let shift = self.bits_in_cache - nbits;
         let mut val : u32 = self.next_byte as u32 >> shift;
-        val |= self.cache << (8 - shift);
-        val = val & ((0x01 << nbits) - 1);
+        let nooverflow_cache = self.cache & ((0x01 << (7 - shift)) - 1);
+        val |= nooverflow_cache << (8 - shift);
+        let mask = if nbits == 32 {
+            0xFFFFFFFF
+        } else {
+            (0x01 << nbits) - 1
+        };
+        val = val & mask;
         self.bits_in_cache = shift;
         Some(val)
     }
@@ -117,7 +136,7 @@ impl<'a> H264NalReader<'a> {
             Some(v) => v
         };
         Some(
-            if ue % 2 == 0 {
+            if ue % 2 == 1 {
                 (ue as i32 / 2) + 1
             } else {
                 -(ue as i32 / 2)
