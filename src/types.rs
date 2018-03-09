@@ -1,3 +1,5 @@
+use std::fmt;
+
 pub enum H264NalFormat {
     BYTESTREAM, AVC, UNKNOWN
 }
@@ -98,6 +100,47 @@ impl H264VUIParameters {
     }
 }
 
+impl fmt::Display for H264VUIParameters {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "VUI {{\n")?;
+        write!(f, "    aspect_ratio_info_present_flag: {:?}\n", self.aspect_ratio_info_present_flag)?;
+        write!(f, "    aspect_ratio_idc: {:?}\n", self.aspect_ratio_idc)?;
+        write!(f, "    sar_width: {:?}\n", self.sar_width)?;
+        write!(f, "    sar_height: {:?}\n", self.sar_height)?;
+        write!(f, "    overscan_info_present_flag: {:?}\n", self.overscan_info_present_flag)?;
+        write!(f, "    overscan_appropriate_flag: {:?}\n", self.overscan_appropriate_flag)?;
+        write!(f, "    video_signal_type_present_flag: {:?}\n", self.video_signal_type_present_flag)?;
+        write!(f, "    video_format: {:?}\n", self.video_format)?;
+        write!(f, "    video_full_range_flag: {:?}\n", self.video_full_range_flag)?;
+        write!(f, "    colour_description_present_flag: {:?}\n", self.colour_description_present_flag)?;
+        write!(f, "    colour_primaries: {:?}\n", self.colour_primaries)?;
+        write!(f, "    transfer_characteristics: {:?}\n", self.transfer_characteristics)?;
+        write!(f, "    matrix_coefficients: {:?}\n", self.matrix_coefficients)?;
+        write!(f, "    chroma_loc_info_present_flag: {:?}\n", self.chroma_loc_info_present_flag)?;
+        write!(f, "    chroma_sample_loc_type_top_field: {:?}\n", self.chroma_sample_loc_type_top_field)?;
+        write!(f, "    chroma_sample_loc_type_bottom_field: {:?}\n", self.chroma_sample_loc_type_bottom_field)?;
+        write!(f, "    timing_info_present_flag: {:?}\n", self.timing_info_present_flag)?;
+        write!(f, "    num_units_in_tick: {:?}\n", self.num_units_in_tick)?;
+        write!(f, "    time_scale: {:?}\n", self.time_scale)?;
+        write!(f, "    fixed_frame_rate_flag: {:?}\n", self.fixed_frame_rate_flag)?;
+        write!(f, "    nal_hrd_parameters_present_flag: {:?}\n", self.nal_hrd_parameters_present_flag)?;
+        write!(f, "    nal_hrd_parameters: {:?}\n", self.nal_hrd_parameters)?;
+        write!(f, "    vcl_hrd_parameters_present_flag: {:?}\n", self.vcl_hrd_parameters_present_flag)?;
+        write!(f, "    vcl_hrd_parameters: {:?}\n", self.vcl_hrd_parameters)?;
+        write!(f, "    low_delay_hrd_flag: {:?}\n", self.low_delay_hrd_flag)?;
+        write!(f, "    pic_struct_present_flag: {:?}\n", self.pic_struct_present_flag)?;
+        write!(f, "    bitstream_restriction_flag: {:?}\n", self.bitstream_restriction_flag)?;
+        write!(f, "    motion_vectors_over_pic_boundaries_flag: {:?}\n", self.motion_vectors_over_pic_boundaries_flag)?;
+        write!(f, "    max_bytes_per_pic_denom: {:?}\n", self.max_bytes_per_pic_denom)?;
+        write!(f, "    max_bits_per_mb_denom: {:?}\n", self.max_bits_per_mb_denom)?;
+        write!(f, "    log2_max_mv_length_horizontal: {:?}\n", self.log2_max_mv_length_horizontal)?;
+        write!(f, "    log2_max_mv_length_vertical: {:?}\n", self.log2_max_mv_length_vertical)?;
+        write!(f, "    max_num_reorder_frames: {:?}\n", self.max_num_reorder_frames)?;
+        write!(f, "    max_dec_frame_buffering: {:?}\n", self.max_dec_frame_buffering)?;
+        write!(f, "}}\n")
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct H264HDRParameters {
     pub cpb_cnt_minus1: u32,
@@ -126,6 +169,23 @@ impl H264HDRParameters {
             dpb_output_delay_length_minus1: 0,
             time_offset_length: 0
         }
+    }
+}
+
+impl fmt::Display for H264HDRParameters {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "HDR Params {{\n");
+        write!(f, "cpb_cnt_minus1: {:?}\n", self.cpb_cnt_minus1)?;
+        write!(f, "bit_rate_scale: {:?}\n", self.bit_rate_scale)?;
+        write!(f, "cpb_size_scale: {:?}\n", self.cpb_size_scale)?;
+        write!(f, "bit_rate_value_minus1: {:?}\n", self.bit_rate_value_minus1)?;
+        write!(f, "cpb_size_value_minus1: {:?}\n", self.cpb_size_value_minus1)?;
+        write!(f, "cbr_flag: {:?}\n", self.cbr_flag)?;
+        write!(f, "initial_cpb_removal_delay_length_minus1: {:?}\n", self.initial_cpb_removal_delay_length_minus1)?;
+        write!(f, "cpb_removal_delay_length_minus1: {:?}\n", self.cpb_removal_delay_length_minus1)?;
+        write!(f, "dpb_output_delay_length_minus1: {:?}\n", self.dpb_output_delay_length_minus1)?;
+        write!(f, "time_offset_length: {:?}\n", self.time_offset_length)?;
+        write!(f, "}}\n")
     }
 }
 
@@ -228,6 +288,58 @@ impl H264NalUnitSPS {
     }
 }
 
+impl fmt::Display for H264NalUnitSPS {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "SPS: {{\n")?;
+        write!(f, "    profile_idc: {}\n", self.profile_idc)?;
+        write!(f, "    constraint_0_flag: {}\n", self.constraint_0_flag)?;
+        write!(f, "    constraint_1_flag: {}\n", self.constraint_1_flag)?;
+        write!(f, "    constraint_2_flag: {}\n", self.constraint_2_flag)?;
+        write!(f, "    constraint_3_flag: {}\n", self.constraint_3_flag)?;
+        write!(f, "    constraint_4_flag: {}\n", self.constraint_4_flag)?;
+        write!(f, "    constraint_5_flag: {}\n", self.constraint_5_flag)?;
+        write!(f, "    level_idc: {}\n", self.level_idc)?;
+        write!(f, "    seq_parameter_set_id: {}\n", self.seq_parameter_set_id)?;
+        write!(f, "    chroma_format_idc: {}\n", self.chroma_format_idc)?;
+        write!(f, "    separate_colour_plane_flag: {}\n", self.separate_colour_plane_flag)?;
+        write!(f, "    bit_depth_luma_minus8: {}\n", self.bit_depth_luma_minus8)?;
+        write!(f, "    bit_depth_chroma_minus8: {}\n", self.bit_depth_chroma_minus8)?;
+        write!(f, "    qpprime_y_zero_transform_bypass_flag: {}\n", self.qpprime_y_zero_transform_bypass_flag)?;
+        write!(f, "    seq_scaling_matrix_present_flag: {}\n", self.seq_scaling_matrix_present_flag)?;
+        write!(f, "    seq_scaling_list_present_flag: {:?}\n", self.seq_scaling_list_present_flag)?;
+        write!(f, "    scaling_list_4x4: {:?}\n", self.scaling_list_4x4)?;
+        write!(f, "    scaling_list_8x8: {:?}\n", self.scaling_list_8x8)?;
+        write!(f, "    log2_max_frame_num_minus4: {}\n", self.log2_max_frame_num_minus4)?;
+        write!(f, "    pic_order_cnt_type: {}\n", self.pic_order_cnt_type)?;
+        write!(f, "    log2_max_pic_order_cnt_lsb_minus4: {}\n", self.log2_max_pic_order_cnt_lsb_minus4)?;
+        write!(f, "    delta_pic_order_always_zero_flag: {}\n", self.delta_pic_order_always_zero_flag)?;
+        write!(f, "    offset_for_non_ref_pic: {}\n", self.offset_for_non_ref_pic)?;
+        write!(f, "    offset_for_top_to_bottom_field: {}\n", self.offset_for_top_to_bottom_field)?;
+        write!(f, "    num_ref_frames_in_pic_order_cnt_cycle: {}\n", self.num_ref_frames_in_pic_order_cnt_cycle)?;
+        write!(f, "    offset_for_ref_frame: {:?}\n", self.offset_for_ref_frame)?;
+        write!(f, "    max_num_ref_frames: {}\n", self.max_num_ref_frames)?;
+        write!(f, "    gaps_in_frame_num_value_allowed_flag: {}\n", self.gaps_in_frame_num_value_allowed_flag)?;
+        write!(f, "    pic_width_in_mbs_minus1: {}\n", self.pic_width_in_mbs_minus1)?;
+        write!(f, "    pic_height_in_map_units_minus1: {}\n", self.pic_height_in_map_units_minus1)?;
+        write!(f, "    frame_mbs_only_flag: {}\n", self.frame_mbs_only_flag)?;
+        write!(f, "    mb_adaptive_frame_field_flag: {}\n", self.mb_adaptive_frame_field_flag)?;
+        write!(f, "    direct_8x8_inference_flag: {}\n", self.direct_8x8_inference_flag)?;
+        write!(f, "    frame_cropping_flag: {}\n", self.frame_cropping_flag)?;
+        write!(f, "    frame_crop_left_offset: {}\n", self.frame_crop_left_offset)?;
+        write!(f, "    frame_crop_right_offset: {}\n", self.frame_crop_right_offset)?;
+        write!(f, "    frame_crop_top_offset: {}\n", self.frame_crop_top_offset)?;
+        write!(f, "    frame_crop_bottom_offset: {}\n", self.frame_crop_bottom_offset)?;
+        if self.vui_parameters_present_flag != 0 {
+            write!(f, "    vui_parameters_present_flag: {}\n", self.vui_parameters_present_flag)?;
+            match self.vui_parameters {
+                Some(ref v) => write!(f, "    vui_parameters: {}\n", v)?,
+                None => {}
+            };
+        }
+        write!(f, "}}\n")
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct H264NalUnitPPS {
     pub pic_parameter_set_id: u32,
@@ -294,6 +406,42 @@ impl H264NalUnitPPS {
             scaling_list_8x8: vec![vec![0u8; 64]; 6],
             second_chroma_qp_index_offset: 0
         }
+    }
+}
+
+impl fmt::Display for H264NalUnitPPS {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "PPS {{")?;
+        write!(f, "    pic_parameter_set_id: {:?}\n", self.pic_parameter_set_id)?;
+        write!(f, "    seq_parameter_set_id: {:?}\n", self.seq_parameter_set_id)?;
+        write!(f, "    entropy_coding_mode_flag: {:?}\n", self.entropy_coding_mode_flag)?;
+        write!(f, "    bottom_field_pic_order_in_frame_present_flag: {:?}\n", self.bottom_field_pic_order_in_frame_present_flag)?;
+        write!(f, "    num_slice_groups_minus1: {:?}\n", self.num_slice_groups_minus1)?;
+        write!(f, "    slice_group_map_type: {:?}\n", self.slice_group_map_type)?;
+        write!(f, "    run_length_minus1: {:?}\n", self.run_length_minus1)?;
+        write!(f, "    top_left: {:?}\n", self.top_left)?;
+        write!(f, "    bottom_right: {:?}\n", self.bottom_right)?;
+        write!(f, "    slice_group_change_direction_flag: {:?}\n", self.slice_group_change_direction_flag)?;
+        write!(f, "    slice_group_change_rate_minus1: {:?}\n", self.slice_group_change_rate_minus1)?;
+        write!(f, "    pic_size_in_map_units_minus1: {:?}\n", self.pic_size_in_map_units_minus1)?;
+        write!(f, "    slice_group_id: {:?}\n", self.slice_group_id)?;
+        write!(f, "    num_ref_idx_l0_default_active_minus1: {:?}\n", self.num_ref_idx_l0_default_active_minus1)?;
+        write!(f, "    num_ref_idx_l1_default_active_minus1: {:?}\n", self.num_ref_idx_l1_default_active_minus1)?;
+        write!(f, "    weighted_pred_flag: {:?}\n", self.weighted_pred_flag)?;
+        write!(f, "    weighted_bipred_idc: {:?}\n", self.weighted_bipred_idc)?;
+        write!(f, "    pic_init_qp_minus26: {:?}\n", self.pic_init_qp_minus26)?;
+        write!(f, "    pic_init_qs_minus26: {:?}\n", self.pic_init_qs_minus26)?;
+        write!(f, "    chroma_qp_index_offset: {:?}\n", self.chroma_qp_index_offset)?;
+        write!(f, "    deblocking_filter_control_present_flag: {:?}\n", self.deblocking_filter_control_present_flag)?;
+        write!(f, "    constrained_intra_pred_flag: {:?}\n", self.constrained_intra_pred_flag)?;
+        write!(f, "    redundant_pic_cnt_present_flag: {:?}\n", self.redundant_pic_cnt_present_flag)?;
+        write!(f, "    transform_8x8_mode_flag: {:?}\n", self.transform_8x8_mode_flag)?;
+        write!(f, "    pic_scaling_matrix_present_flag: {:?}\n", self.pic_scaling_matrix_present_flag)?;
+        write!(f, "    pic_scaling_list_present_flag: {:?}\n", self.pic_scaling_list_present_flag)?;
+        write!(f, "    scaling_list_4x4: {:?}\n", self.scaling_list_4x4)?;
+        write!(f, "    scaling_list_8x8: {:?}\n", self.scaling_list_8x8)?;
+        write!(f, "    second_chroma_qp_index_offset: {:?}\n", self.second_chroma_qp_index_offset)?;
+        write!(f, "}}")
     }
 }
 
@@ -441,6 +589,44 @@ impl H264NalUnitSlice {
             slice_beta_offset_div2: 0,
             slice_group_change_cycle: 0,
         }
+    }
+}
+
+impl fmt::Display for H264NalUnitSlice {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Slice {{\n")?;
+        write!(f, "    first_mb_in_slice: {:?}\n", self.first_mb_in_slice)?;
+        write!(f, "    slice_type: {:?}\n", self.slice_type)?;
+        write!(f, "    pic_parameter_set_id: {:?}\n", self.pic_parameter_set_id)?;
+        write!(f, "    colour_plane_id: {:?}\n", self.colour_plane_id)?;
+        write!(f, "    frame_num: {:?}\n", self.frame_num)?;
+        write!(f, "    field_pic_flag: {:?}\n", self.field_pic_flag)?;
+        write!(f, "    bottom_field_flag: {:?}\n", self.bottom_field_flag)?;
+        write!(f, "    idr_pic_id: {:?}\n", self.idr_pic_id)?;
+        write!(f, "    pic_order_cnt_lsb: {:?}\n", self.pic_order_cnt_lsb)?;
+        write!(f, "    delta_pic_order_cnt_bottom: {:?}\n", self.delta_pic_order_cnt_bottom)?;
+        write!(f, "    delta_pic_order_cnt: {:?}\n", self.delta_pic_order_cnt)?;
+        write!(f, "    redundant_pic_cnt: {:?}\n", self.redundant_pic_cnt)?;
+        write!(f, "    direct_spatial_mv_pred_flag: {:?}\n", self.direct_spatial_mv_pred_flag)?;
+        write!(f, "    num_ref_idx_active_override_flag: {:?}\n", self.num_ref_idx_active_override_flag)?;
+        write!(f, "    num_ref_idx_l0_active_minus1: {:?}\n", self.num_ref_idx_l0_active_minus1)?;
+        write!(f, "    num_ref_idx_l1_active_minus1: {:?}\n", self.num_ref_idx_l1_active_minus1)?;
+        write!(f, "    no_output_of_prior_pics_flag: {:?}\n", self.no_output_of_prior_pics_flag)?;
+        write!(f, "    long_term_reference_flag: {:?}\n", self.long_term_reference_flag)?;
+        write!(f, "    adaptive_ref_pic_marking_mode_flag: {:?}\n", self.adaptive_ref_pic_marking_mode_flag)?;
+        write!(f, "    difference_of_pic_nums_minus1: {:?}\n", self.difference_of_pic_nums_minus1)?;
+        write!(f, "    long_term_pic_num: {:?}\n", self.long_term_pic_num)?;
+        write!(f, "    long_term_frame_idx: {:?}\n", self.long_term_frame_idx)?;
+        write!(f, "    max_long_term_frame_idx_plus1: {:?}\n", self.max_long_term_frame_idx_plus1)?;
+        write!(f, "    cabac_init_idc: {:?}\n", self.cabac_init_idc)?;
+        write!(f, "    slice_qp_delta: {:?}\n", self.slice_qp_delta)?;
+        write!(f, "    sp_for_switch_flag: {:?}\n", self.sp_for_switch_flag)?;
+        write!(f, "    slice_qs_delta: {:?}\n", self.slice_qs_delta)?;
+        write!(f, "    disable_deblocking_filter_idc: {:?}\n", self.disable_deblocking_filter_idc)?;
+        write!(f, "    slice_alpha_c0_offset_div2: {:?}\n", self.slice_alpha_c0_offset_div2)?;
+        write!(f, "    slice_beta_offset_div2: {:?}\n", self.slice_beta_offset_div2)?;
+        write!(f, "    slice_group_change_cycle: {:?}\n", self.slice_group_change_cycle)?;
+        write!(f, "}}\n")
     }
 }
 
